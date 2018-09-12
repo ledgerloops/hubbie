@@ -42,7 +42,13 @@ function flush() {
 
 module.exports = {
   addChannel: function(medium, myNick, peerNick, cb) {
+    if (typeof medium == 'object') {
+      medium = { server: medium };
+    }
     if (typeof medium == 'number') {
+      medium = { port: medium };
+    }
+    if (typeof medium == 'object') {
       const wss = new WebSocket.Server({ port: medium });
       console.log(`${myNick} is listening for ${peerNick} on ws://localhost:${medium}.`);
       let peer;
