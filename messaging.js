@@ -49,7 +49,7 @@ module.exports = {
       medium = { port: medium };
     }
     if (typeof medium == 'object') {
-      const wss = new WebSocket.Server({ port: medium });
+      const wss = new WebSocket.Server(medium);
       console.log(`${myNick} is listening for ${peerNick} on ws://localhost:${medium}.`);
       let peer;
       wss.on('connection', function connection(ws) {
