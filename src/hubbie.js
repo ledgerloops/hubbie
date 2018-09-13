@@ -175,7 +175,7 @@ Hubbie.prototype = {
   ensureUpstream (peerId) {
     return this.connectToUpstreamRetry(peerId).then(ws => {
       ws.onmessage = (msg) => {
-        const obj = JSON.parse(msg)
+        const obj = JSON.parse(msg.data)
         this.msgHandler(obj, peerId)
       }
       if (this.peers[peerId]) {
