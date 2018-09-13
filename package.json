@@ -24,6 +24,12 @@
     "istanbul": "^0.4.5",
     "mocha": "^5.2.0"
   },
+  "browser": {
+    "greenlock": false,
+    "le-acme-core": false,
+    "le-challenge-fs": false,
+    "le-store-certbot": false
+  },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/michielbdejong/hubbie.git"
