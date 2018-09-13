@@ -80,16 +80,23 @@ Hubbie.prototype = {
       return getLetsEncryptServers(this.config.tls)
     }
 
-    // case 2: don't run a server => []
+    // case 2: use server given in config
+    if (this.config.server) {
+      this.myBaseUrl = 'internal-server'
+      return Promise.resolve([ this.config.server ])
+    }
+
+    // case 3: don't run a server => []
     if (typeof this.config.listen !== 'number') {
       return Promise.resolve([])
     }
 
-    // case 3: listen without TLS on a port => [http]
+    // case 4: listen without TLS on a port => [http]
     this.myBaseUrl = 'ws://localhost:' + this.config.listen
     const server = http.createServer((req, res) => {
       res.end(WELCOME_TEXT)
     })
+
     return new Promise(resolve => server.listen(this.config.listen, resolve([ server ])))
   },
 
