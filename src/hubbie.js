@@ -142,13 +142,13 @@ Hubbie.prototype = {
       ws.onopen = () => {
         ws.hasBeenOpen = true
         resolve(ws)
-      })
-      ws.onerror = reject)
+      }
+      ws.onerror = reject
       ws.onclose = () => {
         if (ws.hasBeenOpen && !this.peers[peerId].shouldClose) {
           this.ensureUpstream(peerId)
         }
-      })
+      }
     })
   },
 
@@ -177,7 +177,7 @@ Hubbie.prototype = {
       ws.onmessage = (msg) => {
         const obj = JSON.parse(msg)
         this.msgHandler(obj, peerId)
-      })
+      }
       if (this.peers[peerId]) {
         this.peers[peerId].ws = ws
         for (let repeaterId in this.peers[peerId].unanswered) {
