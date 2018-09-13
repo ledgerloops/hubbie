@@ -6,7 +6,7 @@ const LE = require('greenlock').LE
 const leChallengeFs = require('le-challenge-fs')
 const leAcmeCore = require('le-acme-core')
 const leStoreBot = require('le-store-certbot')
-const WebSocket = require('ws')
+const WebSocket = require('isomorphic-ws')
 
 const WELCOME_TEXT = 'This is a WebSocket server, please upgrade.'
 const LE_ROOT = '~/letsencrypt'
