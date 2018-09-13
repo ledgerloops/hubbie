@@ -189,14 +189,18 @@ Hubbie.prototype = {
     }, (err) => {}) // eslint-disable-line handle-callback-err
   },
 
+  addUpstream (upstreamConfig) {
+    const peerId = upstreamConfig.url + '/' + this.config.name + '/' + upstreamConfig.token
+    this.incarnations[peerId] = 0
+    return this.ensureUpstream(peerId)
+  },
+
   connectToUpstreams () {
     if (!Array.isArray(this.config.upstreams)) {
       return Promise.resolve()
     }
     return Promise.all(this.config.upstreams.map(upstreamConfig => {
-      const peerId = upstreamConfig.url + '/' + this.config.name + '/' + upstreamConfig.token
-      this.incarnations[peerId] = 0
-      return this.ensureUpstream(peerId)
+      return this.addUpstream(upstreamConfig)
     }))
   },
 
