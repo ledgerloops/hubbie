@@ -25,7 +25,7 @@ InMemChans.prototype = {
         return Promise.resolve();
       }
       console.log('flushing message', cursor);
-      return sendOneMessage(iteration[cursor]).then(() => {
+      return this.sendOneMessage(iteration[cursor]).then(() => {
         console.log('done flushing message', cursor);
         console.log(`Queue now has ${this.queue.length} messages, iteration has ${iteration.length}.`);
         cursor++;
@@ -47,8 +47,8 @@ InMemChans.prototype = {
     this.channels[chanId] = cb;
     console.log(`Messaging channel for ${chanId} created.`);
     return (msg) => {
-      if (autoFlush) {
-        return sendOneMessage({ chanId: chanIdBack, msg });
+      if (this.autoFlush) {
+        return this.sendOneMessage({ chanId: chanIdBack, msg });
       } else {
         this.queue.push({ chanId: chanIdBack, msg });
         console.log(JSON.parse(msg));
@@ -56,8 +56,6 @@ InMemChans.prototype = {
       }
     };
   },
-
-  autoFlush: function() { autoFlush = true; },
   getQueue: function() { return this.queue; },
   discardQueue: function() { this.queue = []; }
 };
