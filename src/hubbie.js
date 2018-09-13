@@ -135,18 +135,16 @@ Hubbie.prototype = {
 
   connectToUpstream (peerId) {
     return new Promise((resolve, reject) => {
-      const ws = new WebSocket(peerId, {
-        perMessageDeflate: false
-      })
+      const ws = new WebSocket(peerId)
       ws.hasBeenOpen = false
       ws.shouldClose = false
       ws.incarnation = ++this.incarnations[peerId]
-      ws.on('open', () => {
+      ws.onopen = () => {
         ws.hasBeenOpen = true
         resolve(ws)
       })
-      ws.on('error', reject)
-      ws.on('close', () => {
+      ws.onerror = reject)
+      ws.onclose = () => {
         if (ws.hasBeenOpen && !this.peers[peerId].shouldClose) {
           this.ensureUpstream(peerId)
         }
@@ -176,7 +174,7 @@ Hubbie.prototype = {
 
   ensureUpstream (peerId) {
     return this.connectToUpstreamRetry(peerId).then(ws => {
-      ws.on('message', (msg) => {
+      ws.onmessage = (msg) => {
         const obj = JSON.parse(msg)
         this.msgHandler(obj, peerId)
       })
