@@ -6,8 +6,6 @@ function WebSocketClient(options, msgHandler) {
   this.peerName = options.peerName;
   this.peerUrl = options.peerUrl;
   this.msgHandler = msgHandler;
-  this.messageQueue = [];
-  this.retryInterval = INITIAL_RETRY_INTERVAL;
   this.incarnations = 0;
 }
 
@@ -15,7 +13,7 @@ WebSocketClient.prototype = {
   connect: function () {
     return new Promise((resolve, reject) => {
       const wsUrl = this.peerUrl + '/' + this.myName + '/' + this.mySecret
-      const ws = new WebSocket(this.wsUrl)
+      const ws = new WebSocket(wsUrl)
       this.hasBeenOpen = false
       this.shouldClose = false
       ws.incarnation = ++this.incarnations

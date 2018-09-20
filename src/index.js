@@ -39,7 +39,7 @@ Hubbie.prototype = {
     this.trySending(peerName);
   },
   trySending: function(peerName) {
-    if (channels[peerName]) {
+    if (this.channels[peerName]) {
       const msg = this.queues[peerName].unshift();
       this.channels[peerName].send(msg).then(() => {
         this.retryInterval[peerName] = INITIAL_RETRY_INTERVAL;
