@@ -1,17 +1,8 @@
 'use strict'
 
 const http = require('http')
-const https = require('https')
-const LE = require('greenlock').LE
-const leChallengeFs = require('le-challenge-fs')
-const leAcmeCore = require('le-acme-core')
-const leStoreBot = require('le-store-certbot')
 const WebSocket = require('isomorphic-ws')
-
-const WELCOME_TEXT = 'This is a WebSocket server, please upgrade.'
-const LE_ROOT = '~/letsencrypt'
-const HTTP_REDIRECT_PORT = 80
-const HTTPS_PORT = 443
+const getLetsEncryptServers = require('get-lets-encrypt-servers')
 
 const PEER_TYPE_DOWNSTREAM = 'downstream'
 const PEER_TYPE_UPSTREAM = 'upstream'
@@ -19,49 +10,6 @@ const PEER_TYPE_UPSTREAM = 'upstream'
 const CONNECT_RETRY_INTERVAL = 10000
 const SEND_RETRY_INTERVAL = 100
 const PING_INTERVAL = 50000 // keep heroku dyno alive
-
-// This function starts a TLS webserver on HTTPS_PORT, with on-the-fly LetsEncrypt cert registration.
-// It also starts a redirect server on HTTP_REDIRECT_PORT, which GreenLock uses for the ACME challenge.
-// Certificates and temporary files are stored in LE_ROOT
-function getLetsEncryptServers (domain) {
-  let httpServer
-  const le = LE.create({
-    // server: 'staging',
-    server: 'https://acme-v01.api.letsencrypt.org/directory',
-    acme: leAcmeCore.ACME.create(),
-    store: leStoreBot.create({ configDir: LE_ROOT + '/etc', webrootPath: LE_ROOT + '/var/:hostname' }),
-    challenges: { 'http-01': leChallengeFs.create({ webrootPath: LE_ROOT + '/var/:hostname' }) },
-    agreeToTerms: function (tosUrl, cb) { cb(null, tosUrl) },
-    debug: true
-  })
-  return new Promise((resolve, reject) => {
-    httpServer = http.createServer(le.middleware())
-    httpServer.listen(HTTP_REDIRECT_PORT, (err) => {
-      if (err) { reject(err) } else { resolve() }
-    })
-  }).then(() => {
-    return le.core.certificates.getAsync({
-      email: `letsencrypt+${domain}@gmail.com`,
-      domains: [ domain ]
-    })
-  }).then(function (certs) {
-    if (!certs) {
-      throw new Error('Should have acquired certificate for domains.')
-    }
-    return new Promise((resolve, reject) => {
-      const httpsServer = https.createServer({
-        key: certs.privkey,
-        cert: certs.cert,
-        ca: certs.chain
-      }, (req, res) => {
-        res.end(WELCOME_TEXT)
-      })
-      httpsServer.listen(HTTPS_PORT, (err) => {
-        if (err) { reject(err) } else { resolve([ httpsServer, httpServer ]) }
-      })
-    })
-  })
-}
 
 function Hubbie (config, connectHandler, msgHandler) {
   this.peers = {}
@@ -75,11 +23,14 @@ function Hubbie (config, connectHandler, msgHandler) {
 
 Hubbie.prototype = {
   getServers () {
+    const handler = (req, res) => {
+      res.end('This is a WebSocket server, please upgrade');
+    };
     console.log('getServers!', this.config);
     // case 1: use LetsEncrypt => [https, http]
     if (this.config.tls) {
       this.myBaseUrl = 'wss://' + this.config.tls
-      return getLetsEncryptServers(this.config.tls)
+      return getLetsEncryptServers(this.config.tls, handler);
     }
 
     // case 2: use server given in config
@@ -96,9 +47,7 @@ Hubbie.prototype = {
 
     // case 4: listen without TLS on a port => [http]
     this.myBaseUrl = 'ws://localhost:' + this.config.listen
-    const server = http.createServer((req, res) => {
-      res.end(WELCOME_TEXT)
-    })
+    const server = http.createServer(handler)
 
     return new Promise(resolve => server.listen(this.config.listen, resolve([ server ])))
   },
