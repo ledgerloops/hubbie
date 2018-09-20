@@ -16,8 +16,9 @@ const HTTPS_PORT = 443
 const PEER_TYPE_DOWNSTREAM = 'downstream'
 const PEER_TYPE_UPSTREAM = 'upstream'
 
-const CONNECT_RETRY_INTERVAL = 1000
+const CONNECT_RETRY_INTERVAL = 10000
 const SEND_RETRY_INTERVAL = 100
+const PING_INTERVAL = 50000 // keep heroku dyno alive
 
 // This function starts a TLS webserver on HTTPS_PORT, with on-the-fly LetsEncrypt cert registration.
 // It also starts a redirect server on HTTP_REDIRECT_PORT, which GreenLock uses for the ACME challenge.
@@ -74,6 +75,7 @@ function Hubbie (config, connectHandler, msgHandler) {
 
 Hubbie.prototype = {
   getServers () {
+    console.log('getServers!', this.config);
     // case 1: use LetsEncrypt => [https, http]
     if (this.config.tls) {
       this.myBaseUrl = 'wss://' + this.config.tls
@@ -82,6 +84,7 @@ Hubbie.prototype = {
 
     // case 2: use server given in config
     if (this.config.server) {
+      console.log('case 2!');
       this.myBaseUrl = 'internal-server'
       return Promise.resolve([ this.config.server ])
     }
@@ -123,6 +126,9 @@ Hubbie.prototype = {
               ws
             }
           }
+          setInterval(() => {
+            ws.send({ msgType: 'PING' });
+          }, PING_INTERVAL);
           ws.on('message', (msg) => {
             const obj = JSON.parse(msg)
             this.msgHandler(obj, peerId)
