@@ -26,7 +26,7 @@ function addWebSockets (server, msgHandler) {
       console.log('connecting client rejected');
       ws.close();
     }
-  }
+  });
 }
 
 function getServers (config, msgHandler) {

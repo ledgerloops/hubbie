@@ -25,9 +25,9 @@ Hubbie.prototype = {
   },
   addClient(options) {
     if (options.peerUrl.startsWith('http')) {
-      this.channels[options.peerName] = new ServerServerPeer(options, this));
+      this.channels[options.peerName] = new ServerServerPeer(options, this);
     } else {
-      const client = new WebSocketClient(options, this));
+      const client = new WebSocketClient(options, this);
       client.connect();
     }
   },
@@ -69,7 +69,7 @@ Hubbie.prototype = {
   },
   onMessage: function(peerName, message) {
     for(let i = 0; i < this.listeners.peer.length; i++) {
-      if (this.listeners.message[i](peerName, message)
+      this.listeners.message[i](peerName, message);
     }
   },
   addChannel: function (peerName, channel) {
