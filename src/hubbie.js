@@ -127,7 +127,7 @@ Hubbie.prototype = {
             }
           }
           setInterval(() => {
-            ws.send({ msgType: 'PING' });
+            ws.send('ping');
           }, PING_INTERVAL);
           ws.on('message', (msg) => {
             const obj = JSON.parse(msg)
