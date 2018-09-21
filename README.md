@@ -45,7 +45,7 @@ setTimeout(() => {
 See `examples/localClient.js`
 
 ```js
-const Hubbie = require('..');
+const Hubbie = require('.');
 
 localClient = new Hubbie();
 localClient.addClient({
@@ -101,6 +101,7 @@ ssh root@ws.example.com
 Then run this node script:
 
 ```js
-new Hubbie({ tls: 'ws.example.com' }, (peerId) => {}, (obj, peerId) => {})
+const a = new Hubbie();
+a.listen({ tls: 'ws.example.com' });
 ```
 
