@@ -1,5 +1,5 @@
 const WebSocket = require('isomorphic-ws')
-const CONNECT_RETRY_INTERVAL = 1000
+const CONNECT_RETRY_INTERVAL = 100
 
 function WebSocketClient(options, msgHandler) {
   this.myName = options.myName;
@@ -45,7 +45,7 @@ WebSocketClient.prototype = {
             resolve(ws)
           }
         }).catch((err) => {
-          console.error('error connection websocket incarnation!', err.message);
+          // console.error('error connection websocket incarnation!', err.message);
         }) // eslint-disable-line handle-callback-err
       }
       let timer = setInterval(tryOnce, CONNECT_RETRY_INTERVAL)
@@ -58,7 +58,12 @@ WebSocketClient.prototype = {
       ws.onmessage = (msg) => {
         this.msgHandler.onMessage(this.peerName, msg.data);
       }
-      this.msgHandler.addChannel(this.peerName, ws);
+      this.msgHandler.addChannel(this.peerName, {
+        send: (msg) => {
+          ws.send(msg);
+          return Promise.resolve();
+        }
+      });
       return {
         close: () => {
           this.shouldClose = true;

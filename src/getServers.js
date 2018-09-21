@@ -14,16 +14,14 @@ function addWebSockets (server, msgHandler) {
     };
    
     if (msgHandler.onPeer(eventObj)) {
-      console.log('connecting client accepted', eventObj);
       msgHandler.addChannel(eventObj.peerName, ws);
-      ws.on('message', (obj) => {
-        msgHandler.onMessage(eventObj.peerName, obj.data);
+      ws.on('message', (msg) => {
+        msgHandler.onMessage(eventObj.peerName, msg);
       });
       ws.on('close', () => {
         msgHandler.removeChannel(eventObj.peerName);
       });
     } else {
-      console.log('connecting client rejected');
       ws.close();
     }
   });

@@ -3,12 +3,13 @@ const ServerServerPeer = require('./ServerServerPeer');
 const WebSocketClient = require('./WebSocketClient');
 const inMemoryChannels = require('./inMemoryChannels');
 
-const INITIAL_RETRY_INTERVAL = 100;
+const INITIAL_RETRY_INTERVAL = 10000;
 const RETRY_BACKOFF_FACTOR = 1.5;
 
 function Hubbie() {
   this.channels = {};
   this.queues = {};
+  this.retryInterval = {};
   this.serversToClose = [];
   this.listeners = {
     peer: [],
@@ -44,17 +45,20 @@ Hubbie.prototype = {
     this.trySending(peerName);
   },
   trySending: function(peerName) {
-    if (this.channels[peerName]) {
-      const msg = this.queues[peerName].unshift();
+    if (this.channels[peerName] && this.queues[peerName]) {
+      const msg = this.queues[peerName].shift();
       this.channels[peerName].send(msg).then(() => {
         this.retryInterval[peerName] = INITIAL_RETRY_INTERVAL;
         if (this.queues[peerName].length) {
           this.trySending(peerName);
         }
       }, err => {
+        if (this.queues[peerName].length === 0) {
+          setTimeout(() => this.trySending(peerName), this.retryInterval[peerName]);
+          this.retryInterval[peerName] *= RETRY_BACKOFF_FACTOR;
+        }
+        console.error('error in trySending! requeueing', peerName, err.message);
         this.queues[peerName].push(msg);
-        setTimeout(() => this.trySending(peerName), this.retryInterval[peerName]);
-        this.retryInterval[peerName] *= RETRY_BACKOFF_FACTOR;
       });
     }
   },
@@ -73,13 +77,13 @@ Hubbie.prototype = {
     return true;
   },
   onMessage: function(peerName, message) {
-    for(let i = 0; i < this.listeners.peer.length; i++) {
+    for(let i = 0; i < this.listeners.message.length; i++) {
       this.listeners.message[i](peerName, message);
     }
   },
   addChannel: function (peerName, channel) {
     this.channels[peerName] = channel;
-    this.trySending(this.peerName);
+    this.trySending(peerName);
   },
   removeChannel: function (peerName) {
     delete this.channels[peerName];

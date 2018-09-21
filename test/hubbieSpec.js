@@ -9,6 +9,7 @@ describe('Hubbie', function () {
     this.tasks = {
      send: () => {
         this.hubbie1.send('hubbie2', 'hi there');
+        return Promise.resolve();
       }
     };
   });
@@ -26,48 +27,44 @@ describe('Hubbie', function () {
       });
 
       // last two steps:
-      const makeLastTwoSteps = function (one, other) {
-        return function () {
-          describe(`${one} ${other}`, function() {
-            beforeEach(function() {
-              return this.tasks[one]().then(() => {
-                return this.tasks[other]();
+      function lastTwoSteps (one, other) {
+        describe(`${one} ${other}`, function() {
+          beforeEach(function() {
+            return this.tasks[one]().then(() => {
+              return this.tasks[other]();
+            });
+          });
+          it('should connect', function () {
+            return new Promise((resolve) => {
+              this.hubbie2.on('peer', ({ peerName, peerSecret }) => {
+                assert.strictEqual(peerName, 'hubbie1');
+                assert.strictEqual(peerSecret, 'pssst');
+                resolve();
               });
             });
-            it('should connect', function () {
-              return new Promise((resolve) => {
-                this.hubbie2.on('peer', ({ peerName, peerSecret }) => {
-                  assert.strictEqual(peerName, 'alice');
-                  assert.strictEqual(peerSecret, 'pssst');
-                  resolve();
-                });
-              });
-            });
-             it('should deliver the message', function () {
-               return new Promise((resolve) => {
-                 this.hubbie2.on('message', (peerName, message) => {
-                   assert.strictEqual(peerName, 'alice');
-                   assert.strictEqual(message, 'hi there');
-                   resolve();
-                 });
+          });
+           it('should deliver the message', function () {
+             return new Promise((resolve) => {
+               this.hubbie2.on('message', (peerName, message) => {
+                 assert.strictEqual(peerName, 'hubbie1');
+                 assert.strictEqual(message, 'hi there');
+                 resolve();
                });
              });
-          });
-          describe(`${other} ${one}`, function() {
-            beforeEach(function() {
-              return this.tasks[other]().then(() => {
-                return this.tasks[one]();
-              });
-            });
-            it('should deliver the message', function () {
-              assert.strictEqual(this.delivered, true);
-            });
-          });
+           });
+        });
+      }
+
+      function makeSwitchLastTwoSteps (one, other) {
+        return function () {
+          lastTwoSteps(one, other);
+          lastTwoSteps(other, one);
         };
-      };
-      const onceReceiverIsUp = makeLastTwoSteps('sender-up', 'send');
-      const onceSenderIsUp = makeLastTwoSteps('receiver-up', 'send');
-      const onceSent = makeLastTwoSteps('receiver-up', 'sender-up');
+      }
+
+      const onceReceiverIsUp = makeSwitchLastTwoSteps('sender-up', 'send');
+      const onceSenderIsUp = makeSwitchLastTwoSteps('receiver-up', 'send');
+      const onceSent = makeSwitchLastTwoSteps('receiver-up', 'sender-up');
 
       // three steps:
       const makeThreeSteps = function (firstTask, lastTwoSteps) {
@@ -92,7 +89,7 @@ describe('Hubbie', function () {
 
   // client-server with WebSocket:
   const hubbie1WsClient = function () {
-    this.hubbie1.addClient({ myName: 'alice', mySecret: 'pssst', peerName: 'bob', peerUrl: 'ws://localhost:8123' });
+    this.hubbie1.addClient({ myName: 'hubbie1', mySecret: 'pssst', peerName: 'hubbie2', peerUrl: 'ws://localhost:8123' });
     return Promise.resolve();
   };
   const hubbie2WsServer = function () {
