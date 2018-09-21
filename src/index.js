@@ -15,6 +15,7 @@ function Hubbie() {
     peer: [],
     message: []
   };
+  this.stopped = false;
 }
 
 Hubbie.prototype = {
@@ -42,15 +43,15 @@ Hubbie.prototype = {
       this.queues[peerName] = [];
     }
     this.queues[peerName].push(message);
-    console.log('message queued, try sending');
     this.trySending(peerName);
   },
   trySending: function(peerName) {
-   // console.log('try sending', peerName)
+   if (this.stopped) {
+     return;
+    }
     if (this.channels[peerName] && this.queues[peerName]) {
       const msg = this.queues[peerName].shift();
       if (msg) {
-        console.log('calling send', this.channels[peerName], msg);
         this.channels[peerName].send(msg).then(() => {
           this.retryInterval[peerName] = INITIAL_RETRY_INTERVAL;
           if (this.queues[peerName].length) {
@@ -97,7 +98,8 @@ Hubbie.prototype = {
     delete this.channels[peerName];
   },
   stop: function() {
-    return Promise.resolve(this.serversToClose.map(server => server.close())).then(() => console.log('stopped!'));
+    this.stopped = true;
+    return Promise.resolve(this.serversToClose.map(server => server.close()));
   }
 };
 

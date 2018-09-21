@@ -25,7 +25,6 @@ WebSocketClient.prototype = {
       ws.onerror = reject
       ws.onclose = () => {
         if (this.hasBeenOpen && !this.shouldClose && !ws.thisWsShouldClose) {
-          console.log('what? reopening!', this.hasBeenOpen, this.shouldClose, ws.thisWsShouldClose);
           this.ensureOpen()
         }
       }
@@ -69,7 +68,6 @@ WebSocketClient.prototype = {
         close: () => {
           this.shouldClose = true;
           ws.close();
-          console.log('closing client!');
           return Promise.resolve();
         }
       };

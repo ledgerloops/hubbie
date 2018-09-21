@@ -25,7 +25,7 @@ module.exports = {
                 hubbies[other].onMessage(name, msg);
                 resolve();
               } else {
-                reject();
+                reject(new Error('peer not found'));
               }
             }, 0);
           });

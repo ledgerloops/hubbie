@@ -15,7 +15,6 @@ describe('Hubbie', function () {
   });
 
   afterEach(function () {
-    console.log('stopping hubbies');
     return Promise.all([ this.hubbie1.stop(), this.hubbie2.stop() ]);
   });
 
@@ -36,10 +35,8 @@ describe('Hubbie', function () {
             });
           });
           it('should connect', function () {
-            console.log('waiting for hubbie2 to get a peer event about hubbie1');
             return new Promise((resolve) => {
               this.hubbie2.on('peer', ({ peerName, peerSecret }) => {
-                console.log('hubbie2 got a peer event');
                 assert.strictEqual(peerName, 'hubbie1');
                 if (shouldUsePeerSecrets) {
                   assert.strictEqual(peerSecret, 'pssst');
