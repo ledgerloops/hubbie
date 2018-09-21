@@ -20,7 +20,7 @@ function Hubbie() {
 Hubbie.prototype = {
   listen: function(options) {
     if (options.myName) {
-      inMemoryChannels.register(options.myName, this);
+      this.serversToClose.push(inMemoryChannels.register(options.myName, this));
       return Promise.resolve();
     }
     return getServers(options, this).then((servers) => {
@@ -42,24 +42,32 @@ Hubbie.prototype = {
       this.queues[peerName] = [];
     }
     this.queues[peerName].push(message);
+    console.log('message queued, try sending');
     this.trySending(peerName);
   },
   trySending: function(peerName) {
+   // console.log('try sending', peerName)
     if (this.channels[peerName] && this.queues[peerName]) {
       const msg = this.queues[peerName].shift();
-      this.channels[peerName].send(msg).then(() => {
-        this.retryInterval[peerName] = INITIAL_RETRY_INTERVAL;
-        if (this.queues[peerName].length) {
-          this.trySending(peerName);
-        }
-      }, err => {
-        if (this.queues[peerName].length === 0) {
-          setTimeout(() => this.trySending(peerName), this.retryInterval[peerName]);
-          this.retryInterval[peerName] *= RETRY_BACKOFF_FACTOR;
-        }
-        console.error('error in trySending! requeueing', peerName, err.message);
-        this.queues[peerName].push(msg);
-      });
+      if (msg) {
+        console.log('calling send', this.channels[peerName], msg);
+        this.channels[peerName].send(msg).then(() => {
+          this.retryInterval[peerName] = INITIAL_RETRY_INTERVAL;
+          if (this.queues[peerName].length) {
+            this.trySending(peerName);
+          }
+        }, err => {
+          if (this.queues[peerName].length === 0) {
+            setTimeout(() => this.trySending(peerName), this.retryInterval[peerName]);
+            this.retryInterval[peerName] *= RETRY_BACKOFF_FACTOR;
+          }
+          console.error('error in trySending! requeueing', peerName, err.message);
+          this.queues[peerName].push(msg);
+        });
+      }
+    } else { // peer not created yet
+      setTimeout(() => this.trySending(peerName), this.retryInterval[peerName]);
+      this.retryInterval[peerName] *= RETRY_BACKOFF_FACTOR;
     }
   },
   on: function(eventName, handler) {
@@ -89,7 +97,7 @@ Hubbie.prototype = {
     delete this.channels[peerName];
   },
   stop: function() {
-    return Promise.resolve(this.serversToClose.map(server => server.close()));
+    return Promise.resolve(this.serversToClose.map(server => server.close())).then(() => console.log('stopped!'));
   }
 };
 

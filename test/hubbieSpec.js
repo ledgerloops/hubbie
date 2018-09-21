@@ -15,11 +15,12 @@ describe('Hubbie', function () {
   });
 
   afterEach(function () {
+    console.log('stopping hubbies');
     return Promise.all([ this.hubbie1.stop(), this.hubbie2.stop() ]);
   });
 
   // topologies
-  const makeTopology = (name, senderUp, receiverUp) => {
+  const makeTopology = (name, senderUp, receiverUp, shouldUsePeerSecrets) => {
     describe(name, function () {
       beforeEach(function () {
         this.tasks['sender-up'] = senderUp.bind(this);
@@ -35,23 +36,29 @@ describe('Hubbie', function () {
             });
           });
           it('should connect', function () {
+            console.log('waiting for hubbie2 to get a peer event about hubbie1');
             return new Promise((resolve) => {
               this.hubbie2.on('peer', ({ peerName, peerSecret }) => {
+                console.log('hubbie2 got a peer event');
                 assert.strictEqual(peerName, 'hubbie1');
-                assert.strictEqual(peerSecret, 'pssst');
+                if (shouldUsePeerSecrets) {
+                  assert.strictEqual(peerSecret, 'pssst');
+                } else {
+                  assert.strictEqual(peerSecret, undefined);
+                }
                 resolve();
               });
             });
           });
-           it('should deliver the message', function () {
-             return new Promise((resolve) => {
-               this.hubbie2.on('message', (peerName, message) => {
-                 assert.strictEqual(peerName, 'hubbie1');
-                 assert.strictEqual(message, 'hi there');
-                 resolve();
-               });
-             });
-           });
+          it('should deliver the message', function () {
+            return new Promise((resolve) => {
+              this.hubbie2.on('message', (peerName, message) => {
+                assert.strictEqual(peerName, 'hubbie1');
+                assert.strictEqual(message.toString(), 'hi there');
+                resolve();
+              });
+            });
+          });
         });
       }
 
@@ -78,14 +85,24 @@ describe('Hubbie', function () {
         };
       };
       const senderUpFirst = makeThreeSteps('sender-up', onceSenderIsUp);
-       const receiverUpFirst = makeThreeSteps('receiver-up', onceReceiverIsUp);
-       const sentFirst = makeThreeSteps('send', onceSent);
+      const receiverUpFirst = makeThreeSteps('receiver-up', onceReceiverIsUp);
+      const sentFirst = makeThreeSteps('send', onceSent);
 
       senderUpFirst();
       receiverUpFirst();
       sentFirst();
     });
   };
+
+  // in-memory:
+  const hubbie1InMem = function () {
+    this.hubbie1.listen({ myName: 'hubbie1' });
+    return Promise.resolve();
+  };
+  const hubbie2InMem = function () {
+    return this.hubbie2.listen({ myName: 'hubbie2' });
+  }
+  makeTopology('in-memory', hubbie1InMem, hubbie2InMem, false);
 
   // client-server with WebSocket:
   const hubbie1WsClient = function () {
@@ -95,5 +112,5 @@ describe('Hubbie', function () {
   const hubbie2WsServer = function () {
     return this.hubbie2.listen({ port: 8123 });
   }
-  makeTopology('client-server', hubbie1WsClient, hubbie2WsServer);
+  makeTopology('client-server', hubbie1WsClient, hubbie2WsServer, true);
 });

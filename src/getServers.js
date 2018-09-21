@@ -16,6 +16,7 @@ function addWebSockets (server, msgHandler) {
     if (msgHandler.onPeer(eventObj)) {
       msgHandler.addChannel(eventObj.peerName, ws);
       ws.on('message', (msg) => {
+console.log('ws on message!', msg);
         msgHandler.onMessage(eventObj.peerName, msg);
       });
       ws.on('close', () => {
@@ -25,7 +26,13 @@ function addWebSockets (server, msgHandler) {
       ws.close();
     }
   });
-  return wss;
+  return {
+    close: () => {
+      console.log('closing wss!');
+      wss.close();
+      console.log('wss closed!');
+    }
+  };
 }
 
 function getServers (config, msgHandler) {
@@ -51,7 +58,13 @@ function getServers (config, msgHandler) {
     const httpServer = http.createServer(handler)
     return new Promise(resolve => httpServer.listen(config.port, resolve)).then(() => {
       const wsServer = addWebSockets(httpServer, msgHandler);
-      return [ httpServer, wsServer ];
+      return [ {
+        close: () => {
+          console.log('closing http server!');
+          httpServer.close();
+          console.log('httpServer closed!');
+        }
+      }, wsServer ];
     });
   }
 
