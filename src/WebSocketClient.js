@@ -1,5 +1,7 @@
 const WebSocket = require('isomorphic-ws')
-const CONNECT_RETRY_INTERVAL = 100
+
+const INITIAL_RECONNECT_INTERVAL = 100;
+const RECONNECT_BACKOFF_FACTOR = 1.5;
 
 function WebSocketClient(options, msgHandler) {
   this.myName = options.myName;
@@ -48,8 +50,17 @@ WebSocketClient.prototype = {
           // console.error('error connection websocket incarnation!', err.message);
         }) // eslint-disable-line handle-callback-err
       }
-      let timer = setInterval(tryOnce, CONNECT_RETRY_INTERVAL)
+      let reconnectInterval = INITIAL_RECONNECT_INTERVAL
+      let timer
+      function tryAgain() {
+        timer = setTimeout(() => {
+          tryOnce()
+          reconnectInterval *= RECONNECT_BACKOFF_FACTOR
+          tryAgain()
+        }, reconnectInterval)
+      }
       tryOnce()
+      tryAgain()
     })
   },
 

@@ -3,8 +3,8 @@ const ServerServerPeer = require('./ServerServerPeer');
 const WebSocketClient = require('./WebSocketClient');
 const inMemoryChannels = require('./inMemoryChannels');
 
-const INITIAL_RETRY_INTERVAL = 10000;
-const RETRY_BACKOFF_FACTOR = 1.5;
+const INITIAL_RESEND_INTERVAL = 100;
+const RESEND_BACKOFF_FACTOR = 1.5;
 
 function Hubbie() {
   this.channels = {};
@@ -58,14 +58,14 @@ Hubbie.prototype = {
           console.error('error in trySending! requeueing', peerName, err.message);
           this.queues[peerName].push(msg);
         };
-        this.retryInterval[peerName] = INITIAL_RETRY_INTERVAL;
+        this.retryInterval[peerName] = INITIAL_RESEND_INTERVAL;
         if (this.queues[peerName].length) {
           this.trySending(peerName);
         }
       }
     } else { // peer not created yet
       setTimeout(() => this.trySending(peerName), this.retryInterval[peerName]);
-      this.retryInterval[peerName] *= RETRY_BACKOFF_FACTOR;
+      this.retryInterval[peerName] *= RESEND_BACKOFF_FACTOR;
     }
   },
   on: function(eventName, handler) {
