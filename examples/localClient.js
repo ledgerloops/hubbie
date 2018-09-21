@@ -1,21 +1,19 @@
-const Hubbie = require('../src/hubbie')
+const Hubbie = require('..');
 
-const localClient = new Hubbie({
-  name: 'localClient',
-  upstreams: [
-    {
-      url: 'ws://localhost:8000',
-      token: 'asdf'
-    }
-  ]
-}, (peerId) => {
-  console.log(`connected to ${peerId}`)
-}, (obj, peerId) => {
-  console.log(`client sees message from ${peerId}`, obj)
-})
+localClient = new Hubbie();
+localClient.addClient({
+  peerName: 'bob', // for local reference only
+  peerUrl: 'ws://localhost:8000',
+  myName: 'alice', // for remote credentials
+  mySecret: 'psst' // for remote credentials
+});
+localClient.send('bob', 'hi there!');
 
-localClient.start()
+localClient.on('message', (peerName, msg) => {
+  console.log(`Client sees message from ${peerName}`, msg)
+});
+
 setTimeout(() => {
-  console.log('5 seconds passed, closing client again!')
-  localClient.stop()
-}, 5000)
+  console.log('Closing client');
+  localClient.close();
+}, 5000);

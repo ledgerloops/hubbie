@@ -2,96 +2,88 @@
 Manager for WebSocket server and clients
 
 Hubbie can be configured to act as one WebSocket server and/or one or multiple WebSocket clients.
-It takes care of reconnecting clients when the server restarts, and resending WebSocket messages that
-were not yet responded to. It can also register a TLS certificate registration for you, or run
-on localhost.
-
-Its constructor takes three arguments:
-* config
-  * `listen`: `<Number>` On localhost, port to listen on. You can specify `listen`, or `tls`, or neither, but not both.
-  * `tls`: On a server, domain name to register a LetsEncrypt certificate for. You can specify `listen`, or `tls`, or neither, but not both.
-  * `upstreams`: `<Array of Object>`
-    * `url`: `<String>` The base URL of the server. Should start with either `ws://` or `wss://` and should not end in a `/`.
-    * `token`: `<String>` The token for connecting to this upstream.
-  * `name`: `<String>` Required if `upstreams` is non-empty; used to determine the WebSocket URL when connecting to upstreams 
-* connectionCallback
-  * @param `peerId`: `<String>` Full URL of the WebSocket connection, e.g. `'ws://localhost:8000/name/token'`
-* messageCallback
-  * @param `obj`: `<Object>` Result of `JSON.parse` of the message that was received.
-  * @param `peerId`: `<String>` Full URL of the WebSocket connection, e.g. `'ws://localhost:8000/name/token'`
-
-There is are two methods, `send`, to send a message to one of the Spider's peers:
-* @param `obj`: `<Object>` Object that will be passed to `JSON.stringify` to create the message.
-* @param `peerId`: `<String>` URL of the upstream or downstream peer to which the packet should be sent.
-* @param `repeaterId`: `<String or Number, non-falsy>` identifier under which this request should be repeated.
-* @returns `<Promise>.<null>`
-
-and `stopRepeating` (call this when you have received and process and answer):
-* @param `repeaterId`: `<String or Number, non-falsy>` identifier of request for which repeat sending should stop.
+It takes care of reconnecting clients when the server restarts, and queueing up messages until they can be sent.
+It can also register a TLS certificate registration for you, or run on localhost.
+Apart from WebSocket server and WebSocket client, it can act as http cross-posting peer,
+or as a hub for in-process messaging, which is nice when are testing your multi-agent messaging, or simulating a network.
 
 ## Creating a local server:
 
 See `examples/localServer.js`
 
 ```js
-const Hubbie = require('./src/spider')
-localServer = new Hubbie({
-  listen: 8000
-}, (peerId) => {
-  console.log(`somebody connected on ${peerId}`)
-}, (obj, peerId) => {
-  console.log(`server sees message from ${peerId}`, obj)
-})
+const Hubbie = require('.');
+const userCredentials = {
+  alice: 'psst'
+};
+localServer = new Hubbie();
+localServer.listen({
+  port: 8000
+});
+
+localServer.on('peer', (eventObj) => {
+  if (eventObj.peerSecret === userCredentials[eventObj.peerName]) {
+    console.log('Accepting connection', eventObj);
+    localServer.send(eventObj.peerName, 'Welcome!');
+    return true;
+  } else {
+    console.log('Client rejected');
+    return false;
+  }
+});
+localServer.on('message', (peerName, msg) => {
+  console.log(`Server sees message from ${peerName}`, msg)
+});
+setTimeout(() => {
+  console.log('Closing server');
+  localServer.close();
+}, 10000);
 ```
 
 ## Creating a client:
 
-See `examples/localServer.js`
+See `examples/localClient.js`
 
 ```js
-localClient = new Hubbie({
-  name: 'localClient',
-  upstreams: [
-    {
-      url: 'ws://localhost:8000',
-      token: 'asdf'
-    }
-  ]
-}, (peerId) => {
-  console.log(`connected to ${peerId}`)
-}, (obj, peerId) => {
-  console.log(`client sees message from ${peerId}`, obj)
-})
+const Hubbie = require('.');
+
+localClient = new Hubbie();
+localClient.addClient({
+  peerName: 'bob', // for local reference only
+  peerUrl: 'ws://localhost:8000',
+  myName: 'alice', // for remote credentials
+  mySecret: 'psst' // for remote credentials
+});
+localClient.send('bob', 'hi there!');
+
+localClient.on('message', (peerName, msg) => {
+  console.log(`Client sees message from ${peerName}`, msg)
+});
+
+setTimeout(() => {
+  console.log('Closing client');
+  localClient.close();
+}, 5000);
 ```
 
-## Sending and receiving messages
+## Running multiple agents in the same process
 
-Start an interactive node REPL,
+When agents run in the same process, there is no need for them to connect over a WebSocket. Hubbie allows them to listen on a name:
+
 ```sh
-$ node
->
-```
+const Hubbie = require('.')
 
-Now paste the two snippets above into it, and then run:
+const alice = new Hubbie();
+alice.listen({ myName: 'alice' });
 
-```js
-> localClient.start()
-Promise { <pending> }
-> localServer.start()
-Promise { <pending> }
-> somebody connected on ws://localhost:8000/localClient/asdf
-connected to ws://localhost:8000/localClient/asdf
+const bob = new Hubbie();
+bob.listen({ myName: 'bob' });
 
-> localClient.send({ type: 1, requestId: 1, data: { protocolData: [] } }, 'ws://localhost:8000/localClient/asdf', 1)
-undefined
-> server sees message from ws://localhost:8000/localClient/asdf { type: 1, requestId: 1, data: [] }
-> localClient.stopRepeating(1)
-undefined
-> localServer.stop()
-Promise { <pending> }
-> localClient.stop()
-Promise { <pending> }
->
+alice.send('bob', 'Hello Bob!');
+
+bob.on('message', (peerName, msg) => {
+  console.log(`Bob sees message from ${peerName}`, msg)
+});
 ```
 
 ## Built-in LetsEncrypt registration
@@ -109,5 +101,7 @@ ssh root@ws.example.com
 Then run this node script:
 
 ```js
-new Hubbie({ tls: 'ws.example.com' }, (peerId) => {}, (obj, peerId) => {})
+const a = new Hubbie();
+a.listen({ tls: 'ws.example.com' });
 ```
+
