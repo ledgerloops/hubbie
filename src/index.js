@@ -15,7 +15,7 @@ function Hubbie() {
     peer: [],
     message: []
   };
-  this.stopped = false;
+  this.closed = false;
 }
 
 Hubbie.prototype = {
@@ -46,25 +46,22 @@ Hubbie.prototype = {
     this.trySending(peerName);
   },
   trySending: function(peerName) {
-   if (this.stopped) {
+   if (this.closed) {
      return;
     }
     if (this.channels[peerName] && this.queues[peerName]) {
       const msg = this.queues[peerName].shift();
       if (msg) {
-        this.channels[peerName].send(msg).then(() => {
-          this.retryInterval[peerName] = INITIAL_RETRY_INTERVAL;
-          if (this.queues[peerName].length) {
-            this.trySending(peerName);
-          }
-        }, err => {
-          if (this.queues[peerName].length === 0) {
-            setTimeout(() => this.trySending(peerName), this.retryInterval[peerName]);
-            this.retryInterval[peerName] *= RETRY_BACKOFF_FACTOR;
-          }
+        try {
+          this.channels[peerName].send(msg);
+        } catch (err) {
           console.error('error in trySending! requeueing', peerName, err.message);
           this.queues[peerName].push(msg);
-        });
+        };
+        this.retryInterval[peerName] = INITIAL_RETRY_INTERVAL;
+        if (this.queues[peerName].length) {
+          this.trySending(peerName);
+        }
       }
     } else { // peer not created yet
       setTimeout(() => this.trySending(peerName), this.retryInterval[peerName]);
@@ -97,8 +94,8 @@ Hubbie.prototype = {
   removeChannel: function (peerName) {
     delete this.channels[peerName];
   },
-  stop: function() {
-    this.stopped = true;
+  close: function() {
+    this.closed = true;
     return Promise.resolve(this.serversToClose.map(server => server.close()));
   }
 };

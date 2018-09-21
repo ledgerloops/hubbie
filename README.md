@@ -9,51 +9,81 @@ or as a hub for in-process messaging, which is nice when are testing your multi-
 
 ## Creating a local server:
 
-See `examples/local.js`
+See `examples/localServer.js`
 
 ```js
-const Hubbie = require('.')
-
+const Hubbie = require('.');
+const userCredentials = {
+  alice: 'psst'
+};
 localServer = new Hubbie();
 localServer.listen({
   port: 8000
 });
-localServer.on('peer', (peerId) => {
-  console.log(`somebody connected on ${peerId}`)
+
+localServer.on('peer', (eventObj) => {
+  if (eventObj.peerSecret === userCredentials[eventObj.peerName]) {
+    console.log('Accepting connection', eventObj);
+    localServer.send(eventObj.peerName, 'Welcome!');
+    return true;
+  } else {
+    console.log('Client rejected');
+    return false;
+  }
 });
-localServer.on('message', (peerId, msg) => {
-  console.log(`server sees message from ${peerId}`, msg)
+localServer.on('message', (peerName, msg) => {
+  console.log(`Server sees message from ${peerName}`, msg)
 });
+setTimeout(() => {
+  console.log('Closing server');
+  localServer.close();
+}, 10000);
 ```
 
 ## Creating a client:
 
-See `examples/local.js`
+See `examples/localClient.js`
 
 ```js
+const Hubbie = require('..');
+
 localClient = new Hubbie();
 localClient.addClient({
-  myName: 'localClient',
+  peerName: 'bob', // for local reference only
   peerUrl: 'ws://localhost:8000',
-  mySecret: 'asdf'
+  myName: 'alice', // for remote credentials
+  mySecret: 'psst' // for remote credentials
 });
-localClient.on('message', (peerId, msg) => {
-  console.log(`client sees message from ${peerId}`, msg)
+localClient.send('bob', 'hi there!');
+
+localClient.on('message', (peerName, msg) => {
+  console.log(`Client sees message from ${peerName}`, msg)
 });
+
+setTimeout(() => {
+  console.log('Closing client');
+  localClient.close();
+}, 5000);
 ```
 
-## Sending and receiving messages
+## Running multiple agents in the same process
 
-Start an interactive node REPL,
+When agents run in the same process, there is no need for them to connect over a WebSocket. Hubbie allows them to listen on a name:
+
 ```sh
-$ node
->
-```
+const Hubbie = require('.')
 
-Now paste the two snippets above into it, and then run:
+const alice = new Hubbie();
+alice.listen({ myName: 'alice' });
 
-```js
-> localClient.send('ws://localhost:8000/localClient/asdf', 'hello')
+const bob = new Hubbie();
+bob.listen({ myName: 'bob' });
+
+alice.send('bob', 'Hello Bob!');
+
+bob.on('message', (peerName, msg) => {
+  console.log(`Bob sees message from ${peerName}`, msg)
+});
 ```
 
 ## Built-in LetsEncrypt registration
@@ -73,3 +103,4 @@ Then run this node script:
 ```js
 new Hubbie({ tls: 'ws.example.com' }, (peerId) => {}, (obj, peerId) => {})
 ```
+

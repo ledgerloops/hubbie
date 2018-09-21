@@ -15,7 +15,7 @@ describe('Hubbie', function () {
   });
 
   afterEach(function () {
-    return Promise.all([ this.hubbie1.stop(), this.hubbie2.stop() ]);
+    return Promise.all([ this.hubbie1.close(), this.hubbie2.close() ]);
   });
 
   // topologies
