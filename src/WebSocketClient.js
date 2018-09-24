@@ -13,8 +13,6 @@ function WebSocketClient(options, msgHandler) {
   this.hasBeenOpen = false;
   this.shouldClose = false;
   this.reconnectInterval = INITIAL_RECONNECT_INTERVAL;
-        console.log('initialized reconnection interval', this.reconnectInterval)
-  this.ensureOpensRunning = 0;
 }
 
 WebSocketClient.prototype = {
@@ -25,15 +23,12 @@ WebSocketClient.prototype = {
       ws.incarnation = ++this.incarnations
       ws.onopen = () => {
         this.hasBeenOpen = true;
-        console.log('onopen reset reconnection interval', this.reconnectInterval)
         this.reconnectInterval = INITIAL_RECONNECT_INTERVAL;
         resolve(ws);
       }
       ws.onerror = reject
       ws.onclose = () => {
         if (this.hasBeenOpen && !this.shouldClose && !ws.thisWsShouldClose) {
-          console.log('websocket incarnation closed!', ws.incarnation);
-      console.log('onclose calls ensureOpen', this.ensureOpensRunning, this.reconnectInterval)
           this.reconnectInterval *= RECONNECT_BACKOFF_FACTOR
           setTimeout(() => {
             this.ensureOpen()
@@ -65,7 +60,6 @@ WebSocketClient.prototype = {
         timer = setTimeout(() => {
           tryOnce()
           this.reconnectInterval *= RECONNECT_BACKOFF_FACTOR
-console.log('tryAgain increased reconnection interval', this.reconnectInterval)
           tryAgain()
         }, this.reconnectInterval)
       }
@@ -75,8 +69,6 @@ console.log('tryAgain increased reconnection interval', this.reconnectInterval)
   },
 
   ensureOpen: function () {
-    this.ensureOpensRunning++;
-    console.log('ensureOpen start!', this.ensureOpensRunning);
     return this.connectRetry().then(ws => {
       ws.onmessage = (msg) => {
         this.msgHandler.onMessage(this.peerName, msg.data);
@@ -87,8 +79,6 @@ console.log('tryAgain increased reconnection interval', this.reconnectInterval)
           return Promise.resolve();
         }
       });
-    this.ensureOpensRunning--;
-    console.log('ensureOpen finish!', this.ensureOpensRunning);
       return {
         close: () => {
           this.shouldClose = true;
@@ -98,8 +88,6 @@ console.log('tryAgain increased reconnection interval', this.reconnectInterval)
       };
     }, (err) => {
       console.error('failed! this should never be reached', err.message);
-    this.ensureOpensRunning--;
-    console.log('ensureOpen finish!', this.ensureOpensRunning);
       return { close: () => Promise.resolve() };
     });
   }
