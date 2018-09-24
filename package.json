@@ -1,6 +1,6 @@
 {
   "name": "hubbie",
-  "version": "3.0.1",
+  "version": "3.0.2",
   "description": "WebSocket manager",
   "main": "src/index.js",
   "scripts": {
