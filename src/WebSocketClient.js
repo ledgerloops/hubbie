@@ -12,6 +12,9 @@ function WebSocketClient(options, msgHandler) {
   this.incarnations = 0;
   this.hasBeenOpen = false;
   this.shouldClose = false;
+  this.reconnectInterval = INITIAL_RECONNECT_INTERVAL;
+        console.log('initialized reconnection interval', this.reconnectInterval)
+  this.ensureOpensRunning = 0;
 }
 
 WebSocketClient.prototype = {
@@ -22,12 +25,19 @@ WebSocketClient.prototype = {
       ws.incarnation = ++this.incarnations
       ws.onopen = () => {
         this.hasBeenOpen = true;
+        console.log('onopen reset reconnection interval', this.reconnectInterval)
+        this.reconnectInterval = INITIAL_RECONNECT_INTERVAL;
         resolve(ws);
       }
       ws.onerror = reject
       ws.onclose = () => {
         if (this.hasBeenOpen && !this.shouldClose && !ws.thisWsShouldClose) {
-          this.ensureOpen()
+          console.log('websocket incarnation closed!', ws.incarnation);
+      console.log('onclose calls ensureOpen', this.ensureOpensRunning, this.reconnectInterval)
+          this.reconnectInterval *= RECONNECT_BACKOFF_FACTOR
+          setTimeout(() => {
+            this.ensureOpen()
+          }, this.reconnectInterval);
         }
       }
     })
@@ -50,14 +60,14 @@ WebSocketClient.prototype = {
           // console.error('error connection websocket incarnation!', err.message);
         }) // eslint-disable-line handle-callback-err
       }
-      let reconnectInterval = INITIAL_RECONNECT_INTERVAL
       let timer
-      function tryAgain() {
+      const tryAgain = () => {
         timer = setTimeout(() => {
           tryOnce()
-          reconnectInterval *= RECONNECT_BACKOFF_FACTOR
+          this.reconnectInterval *= RECONNECT_BACKOFF_FACTOR
+console.log('tryAgain increased reconnection interval', this.reconnectInterval)
           tryAgain()
-        }, reconnectInterval)
+        }, this.reconnectInterval)
       }
       tryOnce()
       tryAgain()
@@ -65,6 +75,8 @@ WebSocketClient.prototype = {
   },
 
   ensureOpen: function () {
+    this.ensureOpensRunning++;
+    console.log('ensureOpen start!', this.ensureOpensRunning);
     return this.connectRetry().then(ws => {
       ws.onmessage = (msg) => {
         this.msgHandler.onMessage(this.peerName, msg.data);
@@ -75,6 +87,8 @@ WebSocketClient.prototype = {
           return Promise.resolve();
         }
       });
+    this.ensureOpensRunning--;
+    console.log('ensureOpen finish!', this.ensureOpensRunning);
       return {
         close: () => {
           this.shouldClose = true;
@@ -84,6 +98,8 @@ WebSocketClient.prototype = {
       };
     }, (err) => {
       console.error('failed! this should never be reached', err.message);
+    this.ensureOpensRunning--;
+    console.log('ensureOpen finish!', this.ensureOpensRunning);
       return { close: () => Promise.resolve() };
     });
   }
