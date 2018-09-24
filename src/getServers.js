@@ -11,8 +11,10 @@ function checkCreds(url, msgHandler) {
     peerSecret: parts[2]
   };
   if (msgHandler.onPeer(eventObj)) {
+    console.log('peer accepted!', url)
     return eventObj.peerName;
   }
+    console.log('peer rejected!', url)
 }
 
 function addWebSockets (server, msgHandler) {
@@ -52,8 +54,10 @@ function getServers (config, msgHandler) {
       } else {
         res.end('unknown peer name/secret');
       }
+    } else if (config.handler) {
+      config.handler(req, res);
     } else {
-      res.end('This is a WebSocket/POST server, please upgrade or send a POST');
+      res.end('This is a Hubbie server, please use WebSocket or POST requests');
     }
   };
   // case 1: use LetsEncrypt => [https, http]
