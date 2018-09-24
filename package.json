@@ -1,6 +1,6 @@
 {
   "name": "hubbie",
-  "version": "3.0.2",
+  "version": "3.1.0",
   "description": "WebSocket manager",
   "main": "src/index.js",
   "scripts": {
@@ -10,6 +10,7 @@
   "dependencies": {
     "get-lets-encrypt-servers": "^1.0.0",
     "isomorphic-ws": "^4.0.1",
+    "node-fetch": "^2.2.0",
     "ws": "^6.0.0"
   },
   "devDependencies": {

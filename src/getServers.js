@@ -4,22 +4,28 @@ const http = require('http')
 const WebSocket = require('isomorphic-ws')
 const getLetsEncryptServers = require('get-lets-encrypt-servers')
 
+function checkCreds(url, msgHandler) {
+  let parts = url.split('/').concat(['', '', '']);
+  const eventObj = {
+    peerName: parts[1],
+    peerSecret: parts[2]
+  };
+  if (msgHandler.onPeer(eventObj)) {
+    return eventObj.peerName;
+  }
+}
+
 function addWebSockets (server, msgHandler) {
   let wss = new WebSocket.Server({ server });
   wss.on('connection', (ws, httpReq) => {
-    let parts = httpReq.url.split('/').concat(['', '', '']);
-    const eventObj = {
-      peerName: parts[1],
-      peerSecret: parts[2]
-    };
-   
-    if (msgHandler.onPeer(eventObj)) {
-      msgHandler.addChannel(eventObj.peerName, ws);
+    const peerName = checkCreds(httpReq.url, msgHandler);
+    if (peerName) {
+      msgHandler.addChannel(peerName, ws);
       ws.on('message', (msg) => {
-        msgHandler.onMessage(eventObj.peerName, msg);
+        msgHandler.onMessage(peerName, msg);
       });
       ws.on('close', () => {
-        msgHandler.removeChannel(eventObj.peerName);
+        msgHandler.removeChannel(peerName);
       });
     } else {
       ws.close();
@@ -29,9 +35,26 @@ function addWebSockets (server, msgHandler) {
 }
 
 function getServers (config, msgHandler) {
+  const credsCache = {};
   const handler = (req, res) => {
-    // TODO: implement Server-Server handler
-    res.end('This is a WebSocket server, please upgrade');
+    if (req.method === 'POST') {
+      console.log('got POST!');
+      const peerName = checkCreds(req.url, msgHandler);
+      if (peerName) {
+        let body = '';
+        req.on('data', (chunk) => {
+          body += chunk;
+        });
+        req.on('end', () => {
+          msgHandler.onMessage(peerName, body);
+          res.end('');
+        });
+      } else {
+        res.end('unknown peer name/secret');
+      }
+    } else {
+      res.end('This is a WebSocket/POST server, please upgrade or send a POST');
+    }
   };
   // case 1: use LetsEncrypt => [https, http]
   if (config.tls) {

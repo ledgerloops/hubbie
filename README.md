@@ -86,6 +86,63 @@ bob.on('message', (peerName, msg) => {
 });
 ```
 
+## Running two Hubbies in Server-Server configuration
+Here, instead of using a WebSocket server and a WebSocket client, both Hubbies run a http server and a http client. To send a message to the other Hubbie, they do a http post. This setup is not compatible with `Hubbie#listen({ server })`, since Hubbie will not interfere with the POST handler of the existing http server you give it. So please either use `Hubbie#listen({ port })` or `Hubbie#listen({ tls })` instead.
+
+The `'peer'` event will be triggered the first time a message from a new peer is received. If you don't return `false` from any handler of this event, all subsequent POSTs that use that `peerName` and `peerSecret` in the URL will trigger a `'message'` event.
+
+```js
+const Hubbie = require('.');
+const alice = new Hubbie();
+const bob = new Hubbie();
+alice.listen({ port: 8081 });
+bob.listen({ port: 8082 });
+alice.on('peer', ({ peerName, peerSecret }) => {
+  if (peerName == 'bob' && peerSecret == 'boo') {
+    console.og('Accepting connection from Bob');
+    return true;
+  } else {
+    console.log('Client rejected');
+    return false;
+  }
+});
+bob.on('peer', ({ peerName, peerSecret }) => {
+  if (peerName == 'alice' && peerSecret == 'pssst') {
+    console.og('Accepting connection from Alice');
+    return true;
+  } else {
+    console.log('Client rejected');
+    return false;
+  }
+});
+alice.addClient({
+  myName: 'alice',
+  mySecret: 'pssst'
+  peerName: 'bob',
+  peerUrl: 'http://localhost:8082'
+});
+bob.addClient({
+  myName: 'bob',
+  mySecret: 'boo'
+  peerName: 'alice',
+  peerUrl: 'http://localhost:8081'
+});
+alice.on('message', (peerName, msg) => {
+  console.log(`Alice sees message from ${peerName}`, msg)
+});
+alice.on('message', (peerName, msg) => {
+  console.log(`Alice sees message from ${peerName}`, msg)
+});
+alice.send('bob', 'Hello Bob!');
+bob.send('alice', 'Hello Alice!');
+
+setTimeout(() => {
+  console.log('Closing servers');
+  alice.close();
+  bob.close();
+}, 10000);
+```
+
 ## Built-in LetsEncrypt registration
 
 If instead of `listen` you specify `tls`, the server will listen for secure WebSockets on port 443.
