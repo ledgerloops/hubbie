@@ -101,6 +101,17 @@ describe('Hubbie', function () {
   }
   makeTopology('in-memory', hubbie1InMem, hubbie2InMem, false);
 
+  // server-server (actually this doesn't test full duplex, it only tests hubbie1 in the client role and hubbie2 in the server role):
+  const hubbie1SS = function () {
+    this.hubbie1.addClient({ myName: 'hubbie1', mySecret: 'pssst', peerName: 'hubbie2', peerUrl: 'http://localhost:8882' });
+    return Promise.resolve();
+  };
+  const hubbie2SS = function () {
+    this.hubbie2.listen({ port:8882 });
+    return Promise.resolve();
+  };
+  makeTopology('sever-server', hubbie1SS, hubbie2SS, true);
+
   // client-server with WebSocket:
   const hubbie1WsClient = function () {
     this.hubbie1.addClient({ myName: 'hubbie1', mySecret: 'pssst', peerName: 'hubbie2', peerUrl: 'ws://localhost:8123' });
