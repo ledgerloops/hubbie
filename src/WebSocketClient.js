@@ -10,6 +10,7 @@ function WebSocketClient(options, msgHandler) {
   this.peerUrl = options.peerUrl;
   this.msgHandler = msgHandler;
   this.incarnations = 0;
+  this.tryingToOpen = false;
   this.hasBeenOpen = false;
   this.shouldClose = false;
   this.reconnectInterval = INITIAL_RECONNECT_INTERVAL;
@@ -22,17 +23,24 @@ WebSocketClient.prototype = {
       const ws = new WebSocket(wsUrl)
       ws.incarnation = ++this.incarnations
       ws.onopen = () => {
+        console.log('ws open!', ws.incarnation);
         this.hasBeenOpen = true;
         this.reconnectInterval = INITIAL_RECONNECT_INTERVAL;
         resolve(ws);
       }
-      ws.onerror = reject
+      ws.onerror = (err) => {
+        console.log('ws error!', ws.incarnation);
+        reject(err);
+      };
       ws.onclose = () => {
+        console.log('ws close!', ws.incarnation);
         if (this.hasBeenOpen && !this.shouldClose && !ws.thisWsShouldClose) {
           this.reconnectInterval *= RECONNECT_BACKOFF_FACTOR
-          setTimeout(() => {
-            this.ensureOpen()
-          }, this.reconnectInterval);
+          if (!this.tryingToOpen) {
+            setTimeout(() => {
+              this.ensureOpen()
+            }, this.reconnectInterval);
+          }
         }
       }
     })
@@ -69,27 +77,32 @@ WebSocketClient.prototype = {
   },
 
   ensureOpen: function () {
-    return this.connectRetry().then(ws => {
-      ws.onmessage = (msg) => {
-        this.msgHandler.onMessage(this.peerName, msg.data);
-      }
-      this.msgHandler.addChannel(this.peerName, {
-        send: (msg) => {
-          ws.send(msg);
-          return Promise.resolve();
+    if (!this.tryingToOpen) {
+      this.tryingToOpen = true;
+      this.whenOpen = this.connectRetry().then(ws => {
+        this.tryingToOpen = false;
+        ws.onmessage = (msg) => {
+          this.msgHandler.onMessage(this.peerName, msg.data);
         }
+        this.msgHandler.addChannel(this.peerName, {
+          send: (msg) => {
+            ws.send(msg);
+            return Promise.resolve();
+          }
+        });
+        return {
+          close: () => {
+            this.shouldClose = true;
+            ws.close();
+            return Promise.resolve();
+          }
+        };
+      }, (err) => {
+        console.error('failed! this should never be reached', err.message);
+        return { close: () => Promise.resolve() };
       });
-      return {
-        close: () => {
-          this.shouldClose = true;
-          ws.close();
-          return Promise.resolve();
-        }
-      };
-    }, (err) => {
-      console.error('failed! this should never be reached', err.message);
-      return { close: () => Promise.resolve() };
-    });
+    }
+    return this.whenOpen;
   }
 };
  
