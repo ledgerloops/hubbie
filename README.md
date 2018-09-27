@@ -6,18 +6,18 @@ WebSocket client objects take a URL in their constructor, and then live through 
 This may be fine for short-lived web pages that get refreshed soon enough, but for long-lived contexts
 such as [unhosted web apps](https://unhosted.org) or browser extensions, it's more useful to have a client object
 that represents multiple incarnations of a WebSocket, makes sure it opens a new incarnation when necessary,
-and always sends message to the latest incarnation.
+and always sends messages through the currently connected incarnation.
 
 ## What else?
-Hubbie:
-* takes care of reconnecting clients when the server restarts
-* queues up messages until they can be sent
-* can be used as one or multiple WebSocket clients
-* or as a hub for in-process messaging, which is nice when are testing your multi-agent messaging, or simulating a network
-
+Hubbie can:
+* take care of reconnecting clients when the server restarts
+* queue up messages until they can be sent
+* be used as one or multiple WebSocket clients
+* or act as a hub for in-process messaging, which is nice when are testing your multi-agent messaging, or simulating a network
+* WebRTC support is planned
 
 And when used in node, Hubbie can also:
-* be configured to act as one WebSocket server
+* be configured to act as one WebSocket server, handling a simple form of client auth through the URL path
 * register a TLS certificate registration for you, or run on localhost.
 * act as http cross-posting peer (useful to transparently optimize the communication when both sender and receiver are servers)
 
