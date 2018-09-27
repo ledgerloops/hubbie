@@ -8,8 +8,8 @@ such as [unhosted web apps](https://unhosted.org) or browser extensions, it's mo
 that represents multiple incarnations of a WebSocket, makes sure it opens a new incarnation when necessary,
 and always sends messages through the currently connected incarnation.
 
-The idea for Hubbie evolved from my earlier [BtpSpider](https://github.com/interledgerjs/btp-toolbox/pull/1) work, which at the time was part of the Interledgerjs project.
-In its current version, I'm using it as the basis for agent-to-agent messaging in the [LedgerLoops project](http://github.com/ledgerloops/ledgerloops).
+The idea for Hubbie evolved from my earlier [BtpSpider](https://github.com/interledgerjs/btp-toolbox/pull/1) work, which at the time was part of the Interledgerjs project at Ripple.
+In its current version, I'm using it as the basis for agent-to-agent messaging in the [LedgerLoops project](http://github.com/ledgerloops).
 
 ## What else?
 Hubbie can:
