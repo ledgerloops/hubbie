@@ -1,11 +1,25 @@
 # Hubbie
 Manager for WebSocket server and clients
 
-Hubbie can be configured to act as one WebSocket server and/or one or multiple WebSocket clients.
-It takes care of reconnecting clients when the server restarts, and queueing up messages until they can be sent.
-It can also register a TLS certificate registration for you, or run on localhost.
-Apart from WebSocket server and WebSocket client, it can act as http cross-posting peer,
-or as a hub for in-process messaging, which is nice when are testing your multi-agent messaging, or simulating a network.
+## Why?
+WebSocket client objects take a URL in their constructor, and then live through only one cycle of open/close.
+This may be fine for short-lived web pages that get refreshed soon enough, but for long-lived contexts
+such as [unhosted web apps](https://unhosted.org) or browser extensions, it's more useful to have a client object
+that represents multiple incarnations of a WebSocket, makes sure it opens a new incarnation when necessary,
+and always sends message to the latest incarnation.
+
+## What else?
+Hubbie:
+* takes care of reconnecting clients when the server restarts
+* queues up messages until they can be sent
+* can be used as one or multiple WebSocket clients
+* or as a hub for in-process messaging, which is nice when are testing your multi-agent messaging, or simulating a network
+
+
+And when used in node, Hubbie can also:
+* be configured to act as one WebSocket server
+* register a TLS certificate registration for you, or run on localhost.
+* act as http cross-posting peer (useful to transparently optimize the communication when both sender and receiver are servers)
 
 ## Creating a local server:
 
