@@ -8,6 +8,7 @@ function WebSocketClient(options, msgHandler) {
   this.mySecret = options.mySecret;
   this.peerName = options.peerName;
   this.peerUrl = options.peerUrl;
+  this.protocols = options.protocols;
   this.msgHandler = msgHandler;
   this.incarnations = 0;
   this.tryingToOpen = false;
@@ -20,7 +21,7 @@ WebSocketClient.prototype = {
   connect: function () {
     return new Promise((resolve, reject) => {
       const wsUrl = this.peerUrl + '/' + this.myName + '/' + this.mySecret
-      const ws = new WebSocket(wsUrl)
+      const ws = new WebSocket(wsUrl, this.protocols)
       ws.incarnation = ++this.incarnations
       ws.onopen = () => {
         console.log('ws open!', ws.incarnation);
