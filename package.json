@@ -26,12 +26,12 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/michielbdejong/hubbie.git"
+    "url": "git+https://github.com/ledgerloops/hubbie.git"
   },
   "author": "",
   "license": "ISC",
   "bugs": {
-    "url": "https://github.com/michielbdejong/hubbie/issues"
+    "url": "https://github.com/ledgerloops/hubbie/issues"
   },
-  "homepage": "https://github.com/michielbdejong/hubbie#readme"
+  "homepage": "https://github.com/ledgerloops/hubbie#readme"
 }
