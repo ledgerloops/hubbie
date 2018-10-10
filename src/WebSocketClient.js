@@ -24,17 +24,14 @@ WebSocketClient.prototype = {
       const ws = new WebSocket(wsUrl, this.protocols)
       ws.incarnation = ++this.incarnations
       ws.onopen = () => {
-        console.log('ws open!', ws.incarnation);
         this.hasBeenOpen = true;
         this.reconnectInterval = INITIAL_RECONNECT_INTERVAL;
         resolve(ws);
       }
       ws.onerror = (err) => {
-        console.log('ws error!', ws.incarnation);
         reject(err);
       };
       ws.onclose = () => {
-        console.log('ws close!', ws.incarnation);
         if (this.hasBeenOpen && !this.shouldClose && !ws.thisWsShouldClose) {
           this.reconnectInterval *= RECONNECT_BACKOFF_FACTOR
           if (!this.tryingToOpen) {
@@ -61,7 +58,6 @@ WebSocketClient.prototype = {
             resolve(ws)
           }
         }).catch((err) => {
-          // console.error('error connection websocket incarnation!', err.message);
         }) // eslint-disable-line handle-callback-err
       }
       let timer
@@ -99,7 +95,6 @@ WebSocketClient.prototype = {
           }
         };
       }, (err) => {
-        console.error('failed! this should never be reached', err.message);
         return { close: () => Promise.resolve() };
       });
     }

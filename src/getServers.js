@@ -11,10 +11,8 @@ function checkCreds(url, msgHandler) {
     peerSecret: parts[2]
   };
   if (msgHandler.onPeer(eventObj)) {
-    console.log('peer accepted!', url)
     return eventObj.peerName;
   }
-    console.log('peer rejected!', url)
 }
 
 function addWebSockets (server, msgHandler, protocolName) {
@@ -30,7 +28,7 @@ function addWebSockets (server, msgHandler, protocolName) {
     // from https://github.com/websockets/ws/blob/HEAD/doc/ws.md
     // because this way we have peerName available here for the addChannel call:
     const peerName = checkCreds(httpReq.url, msgHandler);
-    if (peerName) {
+    if (peerName !== undefined) {
       msgHandler.addChannel(peerName, ws);
       ws.on('message', (msg) => {
         msgHandler.onMessage(peerName, msg);
@@ -49,7 +47,6 @@ function getServers (config, msgHandler) {
   const credsCache = {};
   const handler = (req, res) => {
     if (req.method === 'POST') {
-      console.log('got POST!');
       const peerName = checkCreds(req.url, msgHandler);
       if (peerName) {
         let body = '';
