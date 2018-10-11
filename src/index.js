@@ -29,6 +29,9 @@ Hubbie.prototype = {
     });
   },
   addClient(options) {
+    if (options.peerUrl.substr(-1) == '/') {
+      options.peerUrl = options.peerUrl.substring(0, options.peerUrl.length-1);
+    }
     if (options.peerUrl.startsWith('http')) {
       this.channels[options.peerName] = new ServerServerPeer(options, this);
     } else {
@@ -74,13 +77,19 @@ Hubbie.prototype = {
     }
     this.listeners[eventName].push(handler);
   },
-  onPeer: function(eventObj) {
-    for(let i = 0; i < this.listeners.peer.length; i++) {
-      if (this.listeners.peer[i](eventObj) === false) {
-        return false;
-      }
+  onPeer: function (eventObj) {
+    const promises = [];
+    for (let i = 0; i < this.listeners.peer.length; i++) {
+      promises.push(this.listeners.peer[i](eventObj));
     }
-    return true;
+    return Promise.all(promises).then(results => {
+      for(let i = 0; i < results.length; i++) {
+        if (results[i] === false) {
+          return false;
+        }
+      }
+      return true;
+    });
   },
   onMessage: function(peerName, message) {
     for(let i = 0; i < this.listeners.message.length; i++) {
