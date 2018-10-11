@@ -42,10 +42,10 @@ localServer.on('peer', (eventObj) => {
   if (eventObj.peerSecret === userCredentials[eventObj.peerName]) {
     console.log('Accepting connection', eventObj);
     localServer.send(eventObj.peerName, 'Welcome!');
-    return true;
+    return Promise.resolve(true);
   } else {
     console.log('Client rejected');
-    return false;
+    return Promise.resolve(false);
   }
 });
 localServer.on('message', (peerName, msg) => {

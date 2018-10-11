@@ -10,9 +10,11 @@ function checkCreds(url, msgHandler) {
     peerName: parts[1],
     peerSecret: parts[2]
   };
-  if (msgHandler.onPeer(eventObj)) {
-    return eventObj.peerName;
-  }
+  return msgHandler.onPeer(eventObj).then((verdict) => {
+    if (verdict) {
+      return eventObj.peerName;
+    }
+  });
 }
 
 function addWebSockets (server, msgHandler, protocolName) {
@@ -27,18 +29,19 @@ function addWebSockets (server, msgHandler, protocolName) {
     // using this instead of the verifyClient option
     // from https://github.com/websockets/ws/blob/HEAD/doc/ws.md
     // because this way we have peerName available here for the addChannel call:
-    const peerName = checkCreds(httpReq.url, msgHandler);
-    if (peerName !== undefined) {
-      msgHandler.addChannel(peerName, ws);
-      ws.on('message', (msg) => {
-        msgHandler.onMessage(peerName, msg);
-      });
-      ws.on('close', () => {
-        msgHandler.removeChannel(peerName);
-      });
-    } else {
-      ws.close();
-    }
+    checkCreds(httpReq.url, msgHandler).then((peerName) => {
+      if (peerName !== undefined) {
+        msgHandler.addChannel(peerName, ws);
+        ws.on('message', (msg) => {
+          msgHandler.onMessage(peerName, msg);
+        });
+        ws.on('close', () => {
+          msgHandler.removeChannel(peerName);
+        });
+      } else {
+        ws.close();
+      }
+    });
   });
   return wss;
 }
