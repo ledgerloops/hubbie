@@ -109,4 +109,6 @@ Hubbie.prototype = {
   }
 };
 
+Hubbie.unregisterNames = inMemoryChannels.unregisterNames;
+
 module.exports = Hubbie;

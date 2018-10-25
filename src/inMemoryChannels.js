@@ -2,6 +2,9 @@
 let hubbies = {};
 
 module.exports = {
+  unregisterNames: () => {
+    hubbies = {};
+  },
   register: function(name, listener) {
     if (typeof hubbies[name] !== 'undefined') {
       throw new Error('name already taken! ' + name);

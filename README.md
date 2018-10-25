@@ -179,3 +179,11 @@ const a = new Hubbie();
 a.listen({ tls: 'ws.example.com' });
 ```
 
+## Use in test environments
+
+This is useful if you want to get rid of previously registered in-memory channels without ending the node process:
+```js
+  afterEach(function () {
+    Hubbie.unregisterNames();
+  });
+```
