@@ -18,7 +18,7 @@ function WebSocketClient(options, msgHandler) {
 }
 
 WebSocketClient.prototype = {
-  connect: function () {
+  connect: function (whenConnected) {
     return new Promise((resolve, reject) => {
       const wsUrl = this.peerUrl + '/' + this.myName + '/' + this.mySecret
       const ws = new WebSocket(wsUrl, this.protocols)
@@ -26,12 +26,14 @@ WebSocketClient.prototype = {
       ws.onopen = () => {
         this.hasBeenOpen = true;
         this.reconnectInterval = INITIAL_RECONNECT_INTERVAL;
+        whenConnected(ws);
         resolve(ws);
       }
       ws.onerror = (err) => {
         reject(err);
       };
       ws.onclose = () => {
+
         if (this.hasBeenOpen && !this.shouldClose && !ws.thisWsShouldClose) {
           this.reconnectInterval *= RECONNECT_BACKOFF_FACTOR
           if (!this.tryingToOpen) {
@@ -41,24 +43,25 @@ WebSocketClient.prototype = {
           }
         }
       }
-    })
+    }).catch((err) => { // ignore
+    }); // eslint-disable-line handle-callback-err
   },
 
-  connectRetry: function () {
+  connectRetry: function (whenConnected) {
     return new Promise((resolve) => {
       let done = false
       const tryOnce = () => {
-        this.connect().then(ws => {
+        this.connect((ws) => {
           if (done) { // this can happen if opening the WebSocket works, but just takes long
             ws.thisWsShouldClose = true
             ws.close()
           } else {
             done = true
             clearInterval(timer)
+            whenConnected(ws);
             resolve(ws)
           }
-        }).catch((err) => {
-        }) // eslint-disable-line handle-callback-err
+        });
       }
       let timer
       const tryAgain = () => {
@@ -76,7 +79,7 @@ WebSocketClient.prototype = {
   ensureOpen: function () {
     if (!this.tryingToOpen) {
       this.tryingToOpen = true;
-      this.whenOpen = this.connectRetry().then(ws => {
+      this.whenOpen = this.connectRetry((ws) => {
         this.tryingToOpen = false;
         ws.onmessage = (msg) => {
           this.msgHandler.onMessage(this.peerName, msg.data);
@@ -87,6 +90,7 @@ WebSocketClient.prototype = {
             return Promise.resolve();
           }
         });
+      }).then((ws) => {
         return {
           close: () => {
             this.shouldClose = true;

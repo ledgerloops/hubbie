@@ -110,7 +110,7 @@ describe('Hubbie', function () {
     this.hubbie2.listen({ port:8882 });
     return Promise.resolve();
   };
-  makeTopology('sever-server', hubbie1SS, hubbie2SS, true);
+  makeTopology('server-server', hubbie1SS, hubbie2SS, true);
 
   // client-server with WebSocket:
   const hubbie1WsClient = function () {
