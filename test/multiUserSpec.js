@@ -1,12 +1,11 @@
 const Hubbie = require('../src/index')
 const assert = require('chai').assert
 
-function  testerFunction(peerUrl) {
+function  testerFunction(peerUrl, listenerName, senderName, peerName) {
   return function () {
     beforeEach(function () {
       this.hubbie1.addClient({ myName: 'hubbie1', mySecret: 'pssst', peerName: 'hubbie2user', peerUrl });
       this.hubbie2.listen({ port:8882, multiUser: true });
-      this.hubbie1.send('hubbie2user', 'hi there');
     });
 
     it('should trigger the peer event', function () {
@@ -22,9 +21,9 @@ function  testerFunction(peerUrl) {
 
     it('should trigger the message event', function () {
       return new Promise((resolve) => {
-        this.hubbie2.on('message', (peerName, message, userName) => {
-          assert.strictEqual(userName, 'hubbie2user');
-          assert.strictEqual(peerName, 'hubbie1');
+        this[listenerName].on('message', (peerName, message, userName) => {
+          assert.strictEqual(userName, senderName);
+          assert.strictEqual(peerName, peerName);
           assert.strictEqual(message.toString(), 'hi there');
           resolve();
         });
@@ -46,8 +45,20 @@ describe('Hubbie', function () {
     };
   });
 
-  describe('listen http multiUser', testerFunction('http://localhost:8882/hubbie2user'));
-  describe('listen ws multiUser', testerFunction('ws://localhost:8882/hubbie2user'));
+  describe('Server to Client (ws only)', function () {
+    beforeEach(function () {
+      setTimeout(() => { this.hubbie2.send('hubbie1', 'hi there', 'hubbie2user'); }, 1000);
+    });
+    describe('listen ws multiUser', testerFunction('ws://localhost:8882/hubbie2user', 'hubbie1', undefined, 'hubbie2user'));
+  });
+
+  describe('Client to Server', function () {
+    beforeEach(function () {
+      this.hubbie1.send('hubbie2user', 'hi there');
+    });
+    describe('listen http multiUser', testerFunction('http://localhost:8882/hubbie2user','hubbie2','hubbie2user','hubbie2'));
+    describe('listen ws multiUser', testerFunction('ws://localhost:8882/hubbie2user', 'hubbie2','hubbie2user','hubbie2'));
+  });
 
   afterEach(function () {
     return Promise.all([ this.hubbie1.close(), this.hubbie2.close() ]);

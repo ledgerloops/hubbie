@@ -45,7 +45,7 @@ function addWebSockets (server, msgHandler, protocolName, multiUser = false) {
           msgHandler.onMessage(peerName, msg, userName);
         });
         ws.on('close', () => {
-          msgHandler.removeChannel(peerName);
+          msgHandler.removeChannel(peerName, userName);
         });
       } else {
         ws.close();

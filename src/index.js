@@ -18,6 +18,10 @@ function Hubbie() {
   this.closed = false;
 }
 
+function channelName(userName, peerName) {
+  return (userName ? `${userName}/${peerName}` : peerName);
+}
+
 Hubbie.prototype = {
   listen: function(options) {
     if (options.myName) {
@@ -33,7 +37,7 @@ Hubbie.prototype = {
       options.peerUrl = options.peerUrl.substring(0, options.peerUrl.length-1);
     }
     if (options.peerUrl.startsWith('http')) {
-      this.channels[options.peerName] = new ServerServerPeer(options, this);
+      this.channels[channelName(options.userName, options.peerName)] = new ServerServerPeer(options, this);
     } else {
       const client = new WebSocketClient(options, this);
       client.ensureOpen().then(openClient => { // will run in the background
@@ -41,34 +45,34 @@ Hubbie.prototype = {
       });
     }
   },
-  send: function(peerName, message) {
-    if (!this.queues[peerName]) {
-      this.queues[peerName] = [];
+  send: function(peerName, message, userName) {
+    if (!this.queues[channelName(userName, peerName)]) {
+      this.queues[channelName(userName, peerName)] = [];
     }
-    this.queues[peerName].push(message);
-    this.trySending(peerName);
+    this.queues[channelName(userName, peerName)].push(message);
+    this.trySending(channelName(userName, peerName));
   },
-  trySending: function(peerName) {
+  trySending: function(channelName) {
    if (this.closed) {
      return;
     }
-    if (this.channels[peerName] && this.queues[peerName]) {
-      const msg = this.queues[peerName].shift();
+    if (this.channels[channelName] && this.queues[channelName]) {
+      const msg = this.queues[channelName].shift();
       if (msg) {
         try {
-          this.channels[peerName].send(msg);
+          this.channels[channelName].send(msg);
         } catch (err) {
-          console.error('error in trySending! requeueing', peerName, err.message);
-          this.queues[peerName].push(msg);
+          console.error('error in trySending! requeueing', channelName, err.message);
+          this.queues[channelName].push(msg);
         };
-        this.retryInterval[peerName] = INITIAL_RESEND_INTERVAL;
-        if (this.queues[peerName].length) {
-          this.trySending(peerName);
+        this.retryInterval[channelName] = INITIAL_RESEND_INTERVAL;
+        if (this.queues[channelName].length) {
+          this.trySending(channelName);
         }
       }
     } else { // peer not created yet
-      setTimeout(() => this.trySending(peerName), this.retryInterval[peerName]);
-      this.retryInterval[peerName] *= RESEND_BACKOFF_FACTOR;
+      setTimeout(() => this.trySending(channelName), this.retryInterval[channelName]);
+      this.retryInterval[channelName] *= RESEND_BACKOFF_FACTOR;
     }
   },
   on: function(eventName, handler) {
@@ -97,11 +101,11 @@ Hubbie.prototype = {
     }
   },
   addChannel: function (peerName, channel, userName) {
-    this.channels[peerName] = channel;
-    this.trySending(peerName);
+    this.channels[channelName(userName, peerName)] = channel;
+    this.trySending(channelName(userName, peerName));
   },
-  removeChannel: function (peerName) {
-    delete this.channels[peerName];
+  removeChannel: function (peerName, userName) {
+    delete this.channels[channelName(userName, peerName)];
   },
   close: function() {
     this.closed = true;
