@@ -47,7 +47,7 @@ describe('Hubbie', function () {
 
   describe('Server to Client (ws only)', function () {
     beforeEach(function () {
-      setTimeout(() => { this.hubbie2.send('hubbie1', 'hi there', 'hubbie2user'); }, 1000);
+      this.hubbie2.send('hubbie1', 'hi there', 'hubbie2user');
     });
     describe('listen ws multiUser', testerFunction('ws://localhost:8882/hubbie2user', 'hubbie1', undefined, 'hubbie2user'));
   });
