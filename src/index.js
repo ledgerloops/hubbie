@@ -91,12 +91,12 @@ Hubbie.prototype = {
       return true;
     });
   },
-  onMessage: function(peerName, message) {
+  onMessage: function(peerName, message, userName) {
     for(let i = 0; i < this.listeners.message.length; i++) {
-      this.listeners.message[i](peerName, message);
+      this.listeners.message[i](peerName, message, userName);
     }
   },
-  addChannel: function (peerName, channel) {
+  addChannel: function (peerName, channel, userName) {
     this.channels[peerName] = channel;
     this.trySending(peerName);
   },

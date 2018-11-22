@@ -21,7 +21,7 @@ function checkCreds(url, msgHandler, multiUser = false) {
   }
   return msgHandler.onPeer(eventObj).then((verdict) => {
     if (verdict) {
-      return eventObj.peerName;
+      return eventObj;
     }
   });
 }
@@ -38,11 +38,11 @@ function addWebSockets (server, msgHandler, protocolName, multiUser = false) {
     // using this instead of the verifyClient option
     // from https://github.com/websockets/ws/blob/HEAD/doc/ws.md
     // because this way we have peerName available here for the addChannel call:
-    checkCreds(httpReq.url, msgHandler, multiUser).then((peerName) => {
+    checkCreds(httpReq.url, msgHandler, multiUser).then(({ peerName, userName }) => {
       if (peerName !== undefined) {
-        msgHandler.addChannel(peerName, ws);
+        msgHandler.addChannel(peerName, ws, userName);
         ws.on('message', (msg) => {
-          msgHandler.onMessage(peerName, msg);
+          msgHandler.onMessage(peerName, msg, userName);
         });
         ws.on('close', () => {
           msgHandler.removeChannel(peerName);
@@ -59,14 +59,14 @@ function getServers (config, msgHandler) {
   const credsCache = {};
   const handler = (req, res) => {
     if (req.method === 'POST') {
-      checkCreds(req.url, msgHandler, config.multiUser).then((peerName) => {
+      checkCreds(req.url, msgHandler, config.multiUser).then(({ peerName, userName }) => {
         if (peerName) {
           let body = '';
           req.on('data', (chunk) => {
             body += chunk;
           });
           req.on('end', () => {
-            msgHandler.onMessage(peerName, body);
+            msgHandler.onMessage(peerName, body, userName);
             res.end('');
           });
         } else {
