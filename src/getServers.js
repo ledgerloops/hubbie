@@ -4,12 +4,21 @@ const http = require('http')
 const WebSocket = require('isomorphic-ws')
 const getLetsEncryptServers = require('get-lets-encrypt-servers')
 
-function checkCreds(url, msgHandler) {
+function checkCreds(url, msgHandler, multiUser = false) {
   let parts = url.split('/').concat(['', '', '']);
-  const eventObj = {
-    peerName: parts[1],
-    peerSecret: parts[2]
-  };
+  let eventObj;
+  if (multiUser)  {
+    eventObj = {
+      userName: parts[1],
+      peerName: parts[2],
+      peerSecret: parts[3]
+    };
+  } else {
+    eventObj = {
+      peerName: parts[1],
+      peerSecret: parts[2]
+    };
+  }
   return msgHandler.onPeer(eventObj).then((verdict) => {
     if (verdict) {
       return eventObj.peerName;
@@ -17,7 +26,7 @@ function checkCreds(url, msgHandler) {
   });
 }
 
-function addWebSockets (server, msgHandler, protocolName) {
+function addWebSockets (server, msgHandler, protocolName, multiUser = false) {
   const handleProtocols = (protocols, httpReq) => {
     if (protocols.indexOf(protocolName) === -1) {
       return false;
@@ -29,7 +38,7 @@ function addWebSockets (server, msgHandler, protocolName) {
     // using this instead of the verifyClient option
     // from https://github.com/websockets/ws/blob/HEAD/doc/ws.md
     // because this way we have peerName available here for the addChannel call:
-    checkCreds(httpReq.url, msgHandler).then((peerName) => {
+    checkCreds(httpReq.url, msgHandler, multiUser).then((peerName) => {
       if (peerName !== undefined) {
         msgHandler.addChannel(peerName, ws);
         ws.on('message', (msg) => {
@@ -50,19 +59,20 @@ function getServers (config, msgHandler) {
   const credsCache = {};
   const handler = (req, res) => {
     if (req.method === 'POST') {
-      const peerName = checkCreds(req.url, msgHandler);
-      if (peerName) {
-        let body = '';
-        req.on('data', (chunk) => {
-          body += chunk;
-        });
-        req.on('end', () => {
-          msgHandler.onMessage(peerName, body);
-          res.end('');
-        });
-      } else {
-        res.end('unknown peer name/secret');
-      }
+      checkCreds(req.url, msgHandler, config.multiUser).then((peerName) => {
+        if (peerName) {
+          let body = '';
+          req.on('data', (chunk) => {
+            body += chunk;
+          });
+          req.on('end', () => {
+            msgHandler.onMessage(peerName, body);
+            res.end('');
+          });
+        } else {
+          res.end('unknown peer name/secret');
+        }
+      });
     } else if (config.handler) {
       config.handler(req, res);
     } else {
@@ -72,21 +82,21 @@ function getServers (config, msgHandler) {
   // case 1: use LetsEncrypt => [https, http]
   if (config.tls) {
     return getLetsEncryptServers(config.tls, handler).then(([httpsServer, httpServer]) => {
-      const wsServer = addWebSockets(httpsServer, msgHandler, config.protocolName);
+      const wsServer = addWebSockets(httpsServer, msgHandler, config.protocolName, config.multiUser);
       return [ httpsServer, httpServer, wsServer ]; // servers to close
     });
   }
 
   // case 2: use server given in config
   if (config.server) {
-    return Promise.resolve([ addWebSockets(config.server, msgHandler, config.protocolName) ]); // only wsServer to close, do not close internal server
+    return Promise.resolve([ addWebSockets(config.server, msgHandler, config.protocolName, config.multiUser) ]); // only wsServer to close, do not close internal server
   }
 
   // case 3: listen without TLS on a port => [http]
   if (typeof config.port === 'number') {
     const httpServer = http.createServer(handler)
     return new Promise(resolve => httpServer.listen(config.port, resolve)).then(() => {
-      const wsServer = addWebSockets(httpServer, msgHandler, config.protocolName);
+      const wsServer = addWebSockets(httpServer, msgHandler, config.protocolName, config.multiUser);
       return [ httpServer, wsServer ];
     });
   }
