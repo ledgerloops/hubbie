@@ -13,7 +13,8 @@ function Hubbie() {
   this.serversToClose = [];
   this.listeners = {
     peer: [],
-    message: []
+    message: [],
+    error: []
   };
   this.closed = false;
 }
@@ -98,6 +99,11 @@ Hubbie.prototype = {
   onMessage: function(peerName, message, userName) {
     for(let i = 0; i < this.listeners.message.length; i++) {
       this.listeners.message[i](peerName, message, userName);
+    }
+  },
+  fire: function(eventName, eventObj) {
+    for(let i = 0; i < this.listeners[eventName].length; i++) {
+      this.listeners[eventName][i](eventObj);
     }
   },
   addChannel: function (peerName, channel, userName) {
